@@ -1,0 +1,43 @@
+name: G2G Divine Orb Price Check
+
+on:
+  schedule:
+    - cron: '0 * * * *'    # every hour, on the hour
+  workflow_dispatch:        # manual trigger from the Actions tab
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install playwright
+
+      - name: Install Chromium
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run price scraper
+        run: python scraper.py
+
+      - name: Run price analyzer
+        run: python analyze.py
+
+      - name: Commit updated CSVs
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add prices.csv summary.csv
+          git diff --staged --quiet || git commit -m "price check: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
